@@ -9,9 +9,9 @@ from django.views.decorators.csrf import csrf_exempt
 
 from utils.restful import success, fail
 from rasa.model_config_file import create_config_file
-from bot_engine.models import Model
+from bot_engine.models import Model, SubProcess
 from management.data_base import save_model, get_models, del_model
-from management.model_control import online_model, stop_model, start_model
+from management.model_control import online_model, stop_model, start_model, get_free_ports
 from bot_engine import tasks
 from utils.constants import MODEL_DIR
 
@@ -30,7 +30,8 @@ def train(request):
         version = save_model(skl_id, first)
         # 生成训练任务
         tasks.train_model.delay(version, skl_id, os.path.join(MODEL_DIR, str(skl_id), 'train_log.txt'))
-    except:
+    except Exception as e:
+        print(e)
         return fail()
     else:
         result = {"version": version}
@@ -44,7 +45,66 @@ def online(request):
         skl_id = data['skl_id']
         model_id = data['model_id']
         res = online_model(model_id, skl_id)
-    except:
+    except Exception as e:
+        print(e)
+        return fail()
+    else:
+        if res:
+            return success()
+        else:
+            return fail()
+
+
+@csrf_exempt
+def stop(request):
+    try:
+        data = json.loads(request.body)
+        model_id = data['model_id']
+        stop_model(model_id)
+    except Exception as e:
+        print(e)
+        return fail()
+    else:
+        return success()
+
+
+@csrf_exempt
+def start(request):
+    try:
+        data = json.loads(request.body)
+        model_id = data['model_id']
+        res = start_model(model_id)
+    except Exception as e:
+        print(e)
+        return fail()
+    else:
+        if res:
+            return success()
+        else:
+            return fail()
+
+
+@csrf_exempt
+def get_by_skl_id(request):
+    try:
+        data = json.loads(request.body)
+        skl_id = data['skl_id']
+        models = get_models(skl_id)
+    except Exception as e:
+        print(e)
+        return fail()
+    else:
+        return success(models)
+
+
+@csrf_exempt
+def delete_by_model_id(request):
+    try:
+        data = json.loads(request.body)
+        model_id = data['model_id']
+        res = del_model(model_id)
+    except Exception as e:
+        print(e)
         return fail()
     else:
         if res:
@@ -55,14 +115,21 @@ def online(request):
 
 @csrf_exempt
 def test(request):
-    data = json.loads(request.body)
-    skl_id = data['skl_id']
-    pro_dir = os.path.join(MODEL_DIR, str(skl_id))
-    actions_port = '5055'
-    cmd_actions = 'rasa run actions ' + ' -p ' + actions_port
-    with open(os.path.join(pro_dir, 'actions_log.txt'), 'w') as f1:
-        p1 = subprocess.Popen(cmd_actions, shell=True, stdout=f1, cwd=pro_dir)
-    result = {"version": p1.pid}
+    # data = json.loads(request.body)
+    # skl_id = data['skl_id']
+    # pro_dir = os.path.join(MODEL_DIR, str(skl_id))
+    # actions_port = '5055'
+    # cmd_actions = 'rasa run actions ' + ' -p ' + actions_port
+    # with open(os.path.join(pro_dir, 'actions_log.txt'), 'w') as f1:
+    #     p1 = subprocess.Popen(cmd_actions, shell=True, stdout=f1, cwd=pro_dir)
+    # model_id = Model.objects.filter(skill_id=123, status='offline').values('id')[0]['id']
+    # for i in range(9, 9):
+    #     #     print(i)
+    model_port, actions_port = get_free_ports(8300, 8400)
+    sp = SubProcess(model_id=1, model_pid=2, model_port=model_port, actions_pid=3,
+                    actions_port=actions_port)
+    sp.save()
+    result = {"m": model_port, "a": actions_port}
     return success(result)
 
 

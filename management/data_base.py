@@ -30,5 +30,10 @@ def get_models(skl_id):
 
 
 def del_model(model_id):
-    Model.objects.filter(id=model_id).delete()
+    m = Model.objects.filter(id=model_id).values('process', 'status')[0]
+    if m['process'] != '训练中' and m['status'] != 'online':
+        Model.objects.filter(id=model_id).delete()
+        return True
+    else:
+        return False
 

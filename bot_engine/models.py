@@ -4,7 +4,7 @@ from django.db import models
 # Create your models here.
 class Model(models.Model):
     # model_id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, default='')
     url = models.CharField(max_length=50)
     api = models.CharField(max_length=100)
     status = models.CharField(max_length=20)
@@ -19,6 +19,8 @@ class Model(models.Model):
 
 class SubProcess(models.Model):
     model_pid = models.CharField(max_length=50)
+    model_port = models.IntegerField()
     actions_pid = models.CharField(max_length=50)
+    actions_port = models.IntegerField()
     model_id = models.IntegerField()
 
