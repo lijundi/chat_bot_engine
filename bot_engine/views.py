@@ -2,10 +2,12 @@ import json
 import os
 import subprocess
 import signal
+import shutil
 
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.core.serializers import serialize
 
 from utils.restful import success, fail
 from rasa.model_config_file import create_config_file
@@ -25,7 +27,7 @@ def train(request):
         # 判断是否为第一次训练
         first = not Model.objects.filter(skill_id=skl_id).exists()
         # 生成配置文件
-        # create_config_file(skl_id, first)
+        create_config_file(skl_id, first)
         # 保存到数据库
         version = save_model(skl_id, first)
         # 生成训练任务
@@ -42,14 +44,15 @@ def train(request):
 def online(request):
     try:
         data = json.loads(request.body)
-        skl_id = data['skl_id']
         model_id = data['model_id']
-        res = online_model(model_id, skl_id)
+        res = online_model(model_id)
     except Exception as e:
         print(e)
         return fail()
     else:
         if res:
+            # api = Model.objects.get(id=model_id).api
+            # result = {"api": api}
             return success()
         else:
             return fail()
@@ -90,6 +93,8 @@ def get_by_skl_id(request):
         data = json.loads(request.body)
         skl_id = data['skl_id']
         models = get_models(skl_id)
+        # json_data = serialize('json', models)  # str
+        # models = json.loads(json_data)
     except Exception as e:
         print(e)
         return fail()
@@ -113,6 +118,12 @@ def delete_by_model_id(request):
             return fail()
 
 
+# @csrf_exempt
+# def get_api(request):
+#     try:
+#
+
+
 @csrf_exempt
 def test(request):
     # data = json.loads(request.body)
@@ -125,11 +136,17 @@ def test(request):
     # model_id = Model.objects.filter(skill_id=123, status='offline').values('id')[0]['id']
     # for i in range(9, 9):
     #     #     print(i)
-    model_port, actions_port = get_free_ports(8300, 8400)
-    sp = SubProcess(model_id=1, model_pid=2, model_port=model_port, actions_pid=3,
-                    actions_port=actions_port)
-    sp.save()
-    result = {"m": model_port, "a": actions_port}
-    return success(result)
+    # model_port, actions_port = get_free_ports(8300, 8400)
+    # sp = SubProcess(model_id=1, model_pid=2, model_port=model_port, actions_pid=3,
+    #                 actions_port=actions_port)
+    # sp.save()
+    # result = {"m": model_port, "a": actions_port}
+    # data = json.loads(request.body)
+    # model_id = data['model_id']
+    # skl_id = Model.objects.get(id=model_id).skill_id
+    # result = {'skl_id': skl_id}
+    pro_dir = os.path.join(MODEL_DIR, str(1))
+    shutil.rmtree(pro_dir)
+    return success()
 
 

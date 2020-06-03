@@ -8,7 +8,7 @@ config= 'language: zh\n' \
         '  - name: EntitySynonymMapper\n' \
         '  - name: CRFEntityExtractor\n' \
         '  - name: LexicalSyntacticFeaturizer\n' \
-        '  - name: CountVectorsFeaturize\n' \
+        '  - name: CountVectorsFeaturizer\n' \
         '  - name: CountVectorsFeaturizer\n' \
         '    analyzer: \"char_wb\"\n' \
         '    min_ngram: 1\n' \

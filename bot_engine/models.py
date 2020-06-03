@@ -10,7 +10,7 @@ class Model(models.Model):
     status = models.CharField(max_length=20)
     version = models.CharField(max_length=10)
     skill_id = models.IntegerField()
-    des = models.TextField()
+    des = models.TextField(default='')
     process = models.CharField(max_length=20)
     # time = models.IntegerField()
     # create_time = models.DateTimeField()

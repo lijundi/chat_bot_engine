@@ -8,9 +8,9 @@ from rasa.to_default import to_endpoints
 
 
 def run(model_id):
-    m = Model.objects.filter(id=model_id).values('url', 'skl_id')[0]
+    m = Model.objects.filter(id=model_id).values('url', 'skill_id')[0]
     model_url = m['url']
-    skl_id = m['skl_id']
+    skl_id = m['skill_id']
     pro_dir = os.path.join(MODEL_DIR, str(skl_id))
     # 分配端口
     model_port, actions_port = get_free_ports(8300, 8400)
@@ -28,7 +28,10 @@ def run(model_id):
         p2 = subprocess.Popen(cmd_model, shell=True, stdout=f2, cwd=pro_dir)
     # 判断是否运行成功
     if p1.returncode is None and p2.returncode is None:
-        print("run model: " + model_id)
+        print("run model: " + str(model_id))
+        # 记录api
+        api = 'http://10.108.211.136:' + model_port + '/webhooks/rest/webhook'
+        Model.objects.filter(id=model_id).update(api=api, status='online')
         # 保存到数据库
         sp = SubProcess(model_id=model_id, model_pid=p2.pid, model_port=model_port, actions_pid=p1.pid, actions_port=actions_port)
         sp.save()
@@ -39,13 +42,13 @@ def run(model_id):
 
 
 def stop(model_id):
-    sp = SubProcess.objects.filter(id=model_id).values()[0]
+    sp = SubProcess.objects.filter(model_id=model_id).values()[0]
     # linux适用
     os.kill(int(sp['model_pid']), signal.SIGKILL)
     os.kill(int(sp['actions_pid']), signal.SIGKILL)
     # 删除记录
-    SubProcess.objects.filter(id=model_id).delete()
-    print("stop model: " + model_id)
+    SubProcess.objects.filter(model_id=model_id).delete()
+    print("stop model: " + str(model_id))
 
 
 def check_running_model(skl_id):
@@ -58,19 +61,18 @@ def check_running_model(skl_id):
         Model.objects.filter(skill_id=skl_id, status='stop').update(status='offline')
 
 
-def online_model(model_id, skl_id):
+def online_model(model_id):
+    skl_id = Model.objects.get(id=model_id).skill_id
     check_running_model(skl_id)
-    Model.objects.filter(id=model_id).update(status='online')
     return run(model_id)
 
 
 def stop_model(model_id):
-    Model.objects.filter(id=model_id).update(status='stop')
+    Model.objects.filter(id=model_id).update(status='stop', api='')
     stop(model_id)
 
 
 def start_model(model_id):
-    Model.objects.filter(id=model_id).update(status='online')
     return run(model_id)
 
 
@@ -80,10 +82,12 @@ def get_free_ports(start, end):
     for i in range(start, end):
         if not_used(i) and is_free_port(i):
             m_port = i
+            print("m_port:" + str(m_port))
             break
     for i in range(m_port+1, end):
         if not_used(i) and is_free_port(i):
             a_port = i
+            print("a_port:" + str(a_port))
             return str(m_port), str(a_port)
     raise Exception(print("no free ports"))
 
@@ -94,7 +98,8 @@ def is_free_port(port):
         s.connect(('127.0.0.1', port))
         s.shutdown(2)
         return False
-    except:
+    except Exception as e:
+        print(e)
         return True
 
 

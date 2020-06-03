@@ -1,5 +1,7 @@
-
+import os
+import shutil
 from bot_engine.models import Model
+from utils.constants import MODEL_DIR
 
 
 def newest_version(v_list):
@@ -26,13 +28,20 @@ def save_model(skl_id, first):
 
 
 def get_models(skl_id):
-    return Model.objects.filter(skl_id=skl_id).values()
+    return list(Model.objects.filter(skill_id=skl_id).values())
 
 
 def del_model(model_id):
-    m = Model.objects.filter(id=model_id).values('process', 'status')[0]
+    m = Model.objects.filter(id=model_id).values('process', 'status', 'url', 'skill_id')[0]
     if m['process'] != '训练中' and m['status'] != 'online':
+        # 删除文件
+        os.remove(m['url'])
+        # 删除数据库
         Model.objects.filter(id=model_id).delete()
+        # 判断是否存在模型
+        if not Model.objects.filter(skill_id=m['skill_id']).exists():
+            pro_dir = os.path.join(MODEL_DIR, str(m['skill_id']))
+            shutil.rmtree(pro_dir)
         return True
     else:
         return False
