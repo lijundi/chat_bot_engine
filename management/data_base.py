@@ -35,7 +35,8 @@ def del_model(model_id):
     m = Model.objects.filter(id=model_id).values('process', 'status', 'url', 'skill_id')[0]
     if m['process'] != '训练中' and m['status'] != 'online':
         # 删除文件
-        os.remove(m['url'])
+        if m['process'] != '训练失败':
+            os.remove(m['url'])
         # 删除数据库
         Model.objects.filter(id=model_id).delete()
         # 判断是否存在模型

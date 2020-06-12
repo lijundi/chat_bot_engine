@@ -3,6 +3,8 @@ import os
 import subprocess
 import signal
 import shutil
+import datetime
+import pytz
 
 from django.shortcuts import render
 from django.http import HttpResponse
@@ -118,16 +120,27 @@ def delete_by_model_id(request):
             return fail()
 
 
-# @csrf_exempt
-# def get_api(request):
-#     try:
-#
+@csrf_exempt
+def get_api(request):
+    try:
+        data = json.loads(request.body)
+        skl_id = data['skl_id']
+        model_list = list(Model.objects.filter(skill_id=skl_id).values("status", 'api'))
+        for m in model_list:
+            if m['status'] == 'online':
+                result = {"api": m['api']}
+                return success(result)
+        return fail()
+    except Exception as e:
+        print(e)
+        return fail()
 
 
 @csrf_exempt
 def test(request):
     # data = json.loads(request.body)
     # skl_id = data['skl_id']
+    # version = data['version']
     # pro_dir = os.path.join(MODEL_DIR, str(skl_id))
     # actions_port = '5055'
     # cmd_actions = 'rasa run actions ' + ' -p ' + actions_port
@@ -145,8 +158,28 @@ def test(request):
     # model_id = data['model_id']
     # skl_id = Model.objects.get(id=model_id).skill_id
     # result = {'skl_id': skl_id}
-    pro_dir = os.path.join(MODEL_DIR, str(1))
-    shutil.rmtree(pro_dir)
-    return success()
+    # pro_dir = os.path.join(MODEL_DIR, str(1))
+    # shutil.rmtree(pro_dir)
+    # save_model(1, True)
+    with open(os.path.join(MODEL_DIR, 'train_log.txt'), 'r') as f:
+        out_str = f.read(50)
+    if 'Nothing changed' in out_str:
+        result = {'status': 'ok'}
+    # create_time = Model.objects.get(version="V1", skill_id=1).create_time
+    # end_time = datetime.datetime.now().replace(tzinfo=pytz.timezone('UTC'))
+    # result = {'time': (end_time-create_time).seconds}
+    else:
+        result = {'out_string': out_str}
+    return success(result)
+
+
+def clear_sub_process():
+    SubProcess.objects.all().delete()
+    print("clear SubProcess data in MySql")
+    Model.objects.all().update(status="offline")
+    print("set all models offline")
+
+
+clear_sub_process()
 
 
