@@ -19,7 +19,7 @@ def run(model_id):
            ' url: \"http://localhost:' + actions_port + '/webhook\"\n'
     to_endpoints(enps, pro_dir)
     # 生成命令 转义字符的问题
-    cmd_model = 'rasa run -m ' + model_url + ' -p ' + model_port
+    cmd_model = 'rasa run -m ' + model_url + ' -p ' + model_port + ' --enable-api --log-file out.log'
     cmd_actions = 'rasa run actions ' + ' -p ' + actions_port
     # 创建子进程
     with open(os.path.join(pro_dir, 'actions_log.txt'), 'w') as f1:
@@ -55,8 +55,8 @@ def check_running_model(skl_id):
     # 一个机器人只有一个模型在运行
     if Model.objects.filter(skill_id=skl_id, status='online').exists():
         model_id = Model.objects.filter(skill_id=skl_id, status='online').values('id')[0]['id']
-        Model.objects.filter(id=model_id).update(status='offline')
-        stop_model(model_id)
+        Model.objects.filter(id=model_id).update(status='offline', api='')
+        stop(model_id)
     else:
         Model.objects.filter(skill_id=skl_id, status='stop').update(status='offline')
 

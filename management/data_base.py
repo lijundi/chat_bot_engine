@@ -47,3 +47,13 @@ def del_model(model_id):
     else:
         return False
 
+
+def get_port_from_api(api):
+    tmp = api.split('/', 3)[2]
+    return tmp.split(':', 1)[1]
+
+
+def get_tracker_api(port, sender):
+    return 'http://10.108.211.136:' + port + '/conversations/' + sender + '/tracker'
+
+

@@ -23,7 +23,7 @@ nlu = {
 
 def get_examples(mysql, skl_id):
     examples = list()
-    nlu_sql = 'select text, iten_name, text_id from nludata where status = 1 and skl_id = ' + str(skl_id)
+    nlu_sql = 'select text, iten_name, text_id from nludata where (status = 1 or status = 2) and skl_id = ' + str(skl_id)
     nlu_results = mysql.inquire_all(nlu_sql)
     for item in nlu_results:
         nlu_slot_sql = 'select start, end, word, slot_name from nludata_slot where text_id = ' + str(item[2])

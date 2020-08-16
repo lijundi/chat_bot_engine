@@ -14,7 +14,7 @@ from django.core.serializers import serialize
 from utils.restful import success, fail
 from rasa.model_config_file import create_config_file
 from bot_engine.models import Model, SubProcess
-from management.data_base import save_model, get_models, del_model
+from management.data_base import save_model, get_models, del_model, get_port_from_api, get_tracker_api
 from management.model_control import online_model, stop_model, start_model, get_free_ports
 from bot_engine import tasks
 from utils.constants import MODEL_DIR
@@ -121,20 +121,36 @@ def delete_by_model_id(request):
 
 
 @csrf_exempt
-def get_api(request):
+def get_online_model(request):
     try:
         data = json.loads(request.body)
         skl_id = data['skl_id']
-        model_list = list(Model.objects.filter(skill_id=skl_id).values("status", 'api'))
-        for m in model_list:
-            if m['status'] == 'online':
-                result = {"api": m['api']}
-                return success(result)
+        sender = data['sender']
+        if Model.objects.filter(skill_id=skl_id, status='online').exists():
+            m = Model.objects.filter(skill_id=skl_id, status='online').values('id', 'api')[0]
+            tracker = get_tracker_api(get_port_from_api(m['api']), str(sender))
+            result = {'model_id': m['id'], 'api': m['api'], 'tracker': tracker}
+            return success(result)
         return fail()
     except Exception as e:
         print(e)
         return fail()
 
+
+# @csrf_exempt
+# def reset_model(request):
+#     try:
+#         data = json.loads(request.body)
+#         skl_id = data['skl_id']
+#         if Model.objects.filter(skill_id=skl_id, status='online').exists():
+#             model_id = Model.objects.filter(skill_id=skl_id, status='online').values('id')[0]['id']
+#             stop_model(model_id)
+#             if online_model(model_id):
+#                 return success()
+#         return fail()
+#     except Exception as e:
+#         print(e)
+#         return fail()
 
 @csrf_exempt
 def test(request):
@@ -161,15 +177,16 @@ def test(request):
     # pro_dir = os.path.join(MODEL_DIR, str(1))
     # shutil.rmtree(pro_dir)
     # save_model(1, True)
-    with open(os.path.join(MODEL_DIR, 'train_log.txt'), 'r') as f:
-        out_str = f.read(50)
-    if 'Nothing changed' in out_str:
-        result = {'status': 'ok'}
+    # with open(os.path.join(MODEL_DIR, 'train_log.txt'), 'r') as f:
+    #     out_str = f.read(50)
+    # if 'Nothing changed' in out_str:
+    #     result = {'status': 'ok'}
     # create_time = Model.objects.get(version="V1", skill_id=1).create_time
     # end_time = datetime.datetime.now().replace(tzinfo=pytz.timezone('UTC'))
     # result = {'time': (end_time-create_time).seconds}
-    else:
-        result = {'out_string': out_str}
+    # else:
+    tracker = get_tracker_api(get_port_from_api('http://10.108.211.136:8300/webhooks/rest/webhook'), '0001')
+    result = {'out_string': tracker}
     return success(result)
 
 
