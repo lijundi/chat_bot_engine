@@ -26,10 +26,11 @@ def train(request):
     try:
         data = json.loads(request.body)
         skl_id = data['skl_id']
+        model_type = data['model_type']  # chat, qa
         # 判断是否为第一次训练
         first = not Model.objects.filter(skill_id=skl_id).exists()
         # 生成配置文件
-        create_config_file(skl_id, first)
+        create_config_file(skl_id, first, model_type)
         # 保存到数据库
         version = save_model(skl_id, first)
         # 生成训练任务
@@ -191,6 +192,10 @@ def test(request):
 
 
 def clear_sub_process():
+    sp_list = SubProcess.objects.all().values()
+    for sp in sp_list:
+        os.kill(int(sp['model_pid']), signal.SIGINT)
+        os.kill(int(sp['actions_pid']), signal.SIGINT)
     SubProcess.objects.all().delete()
     print("clear SubProcess data in MySql")
     Model.objects.all().update(status="offline")

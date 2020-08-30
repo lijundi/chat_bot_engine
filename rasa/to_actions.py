@@ -27,7 +27,8 @@ func_submit = '    def submit(\n' \
               '    ) -> List[Dict]:\n'
 func_submit_return = '        return [AllSlotsReset()]\n\n\n'
 
-form_action = '        response = requests.post(url, body)\n' \
+form_action = '        headers = {"Content-Type":"application/json"}\n' \
+              '        response = requests.post(url, json.dumps(body), headers=headers)\n' \
               '        dispatcher.utter_message(response.text)\n'
 
 form_text = '        dispatcher.utter_message'
@@ -42,6 +43,23 @@ func_slot_null = 'class SlotNull(Action):\n\n' \
                  '        domain: Dict[Text, Any]\n' \
                  '    ) -> List[Dict[Text, Any]]:\n' \
                  '        return [AllSlotsReset()]\n\n\n'
+
+func_qa_intent_pre = 'class QAIntent(Action):\n\n' \
+                     '    def name(self) -> Text:\n' \
+                     '        return "action_qa_intent"\n\n' \
+                     '    def run(\n' \
+                     '        self,\n' \
+                     '        dispatcher: CollectingDispatcher,\n' \
+                     '        tracker: Tracker,\n' \
+                     '        domain: Dict[Text, Any]\n' \
+                     '    ) -> List[Dict[Text, Any]]:\n' \
+                     '        text = tracker.latest_message[\'text\']\n'
+
+func_qa_intent_next = '        body = {\'userText\': text}\n' \
+                      '        headers = {"Content-Type":"application/json"}\n' \
+                      '        response = requests.post(url, data=json.dumps(body), headers=headers)\n' \
+                      '        dispatcher.utter_message(response.text)\n' \
+                      '        return []\n\n\n'
 
 
 def get_form_list(mysql, skl_id):
@@ -61,12 +79,18 @@ def get_form_list(mysql, skl_id):
         fm = dict(name=name, slots=slots, action=action)
         if name_reply[2] == 2:
             form_list.append(fm)
-        else:
+        elif name_reply[2] == 1:
             form_text_list.append(fm)
     return form_list, form_text_list
 
 
-def to_actions(mysql, path, skl_id):
+def get_qa_url(mysql, skl_id):
+    sql = 'select reply from intent where reply_type = 3 and skl_id = ' + str(skl_id)
+    url = mysql.inquire_one(sql)
+    return url[0]
+
+
+def to_actions(mysql, path, skl_id, model_type):
     form_list, form_text_list = get_form_list(mysql, skl_id)
     # print(form_list)
     actions_path = os.path.join(path, 'actions.py')
@@ -112,4 +136,9 @@ def to_actions(mysql, path, skl_id):
             f.write('(\'' + form['action'] + '\')\n')
             f.write(func_submit_return)
         f.write(func_slot_null)
+        if model_type == "qa":
+            f.write(func_qa_intent_pre)
+            f.write('        url = \'' + get_qa_url(mysql, skl_id) + '\'\n')
+            f.write(func_qa_intent_next)
+
 

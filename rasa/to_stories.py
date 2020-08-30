@@ -35,6 +35,10 @@ import os
 
 from rasa.file_opt import format_write
 
+qa_story = '## QA story\n' \
+           '* QAIntent\n' \
+           '  - action_qa_intent\n\n'
+
 
 def get_raw_story_list(mysql, skl_id):
     sql = 'select nodes, edges from dmdata where skl_id = ' + str(skl_id)
@@ -152,7 +156,7 @@ def to_story_list(raw_story_list):
     return story_list
 
 
-def to_stories(mysql, path, skl_id):
+def to_stories(mysql, path, skl_id, model_type):
     raw_story_list = get_raw_story_list(mysql, skl_id)
     story_list = to_story_list(raw_story_list)
     # print(story_list)
@@ -166,5 +170,6 @@ def to_stories(mysql, path, skl_id):
                 action_list = item['actions']
                 format_write(f, intent_name, action_list, start='* ')
             f.write('\n')
-
+        if model_type == 'qa':
+            f.write(qa_story)
 

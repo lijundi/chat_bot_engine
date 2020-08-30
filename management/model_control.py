@@ -30,7 +30,7 @@ def run(model_id):
     if p1.returncode is None and p2.returncode is None:
         print("run model: " + str(model_id))
         # 记录api
-        api = 'http://10.108.211.136:' + model_port + '/webhooks/rest/webhook'
+        api = 'http://127.0.0.1:' + model_port + '/webhooks/rest/webhook'
         Model.objects.filter(id=model_id).update(api=api, status='online')
         # 保存到数据库
         sp = SubProcess(model_id=model_id, model_pid=p2.pid, model_port=model_port, actions_pid=p1.pid, actions_port=actions_port)
@@ -44,8 +44,8 @@ def run(model_id):
 def stop(model_id):
     sp = SubProcess.objects.filter(model_id=model_id).values()[0]
     # linux适用
-    os.kill(int(sp['model_pid']), signal.SIGKILL)
-    os.kill(int(sp['actions_pid']), signal.SIGKILL)
+    os.kill(int(sp['model_pid']), signal.SIGINT)
+    os.kill(int(sp['actions_pid']), signal.SIGINT)
     # 删除记录
     SubProcess.objects.filter(model_id=model_id).delete()
     print("stop model: " + str(model_id))

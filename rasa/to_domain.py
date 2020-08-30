@@ -96,7 +96,7 @@ def get_response(mysql, skl_id):
     return response
 
 
-def to_domain(mysql, path, skl_id):
+def to_domain(mysql, path, skl_id, model_type):
     # print(get_intents(mysql, 115))
     # print(get_forms(mysql, 115))
     # print(get_response(mysql, 115))
@@ -105,19 +105,26 @@ def to_domain(mysql, path, skl_id):
     entity_list = slot_list = get_slots(mysql, skl_id)
     action_list = get_action(mysql, skl_id)
     action_list.append("action_slot_null")
+    if model_type == 'qa':
+        action_list.append('action_qa_intent')
     response_list = get_response(mysql, skl_id)
     domain_path = os.path.join(path, 'domain.yml')
     with open(domain_path, 'w', encoding='utf8') as f:
         format_write(f, "intents:", intent_list, end='\n')
-        format_write(f, "forms:", form_list, end='\n')
-        format_write(f, "entities:", entity_list, end='\n')
-        format_write(f, "slots:")
-        for item in slot_list:
-            format_write(f, item + ':', blank=2)
-            format_write(f, "type: unfeaturized", blank=4)
-        format_write(f, '')
-        format_write(f, "actions:", action_list, end='\n')
-        format_write(f, "responses:")
-        for item in response_list:
-            format_write(f, item[0] + ":", ['text: ' + "\"" + item[1] + "\""], 2, '\n')
+        if form_list:
+            format_write(f, "forms:", form_list, end='\n')
+        if entity_list:
+            format_write(f, "entities:", entity_list, end='\n')
+        if slot_list:
+            format_write(f, "slots:")
+            for item in slot_list:
+                format_write(f, item + ':', blank=2)
+                format_write(f, "type: unfeaturized", blank=4)
+            format_write(f, '')
+        if action_list:
+            format_write(f, "actions:", action_list, end='\n')
+        if response_list:
+            format_write(f, "responses:")
+            for item in response_list:
+                format_write(f, item[0] + ":", ['text: ' + "\"" + item[1] + "\""], 2, '\n')
         f.write(session_opt)

@@ -54,6 +54,6 @@ def get_port_from_api(api):
 
 
 def get_tracker_api(port, sender):
-    return 'http://10.108.211.136:' + port + '/conversations/' + sender + '/tracker'
+    return 'http://127.0.0.1:' + port + '/conversations/' + sender + '/tracker'
 
 
