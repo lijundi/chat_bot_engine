@@ -30,3 +30,15 @@ def format_write(_file, title, _list=None, blank=0, start='', end=''):
         _file.write(head+'  - '+i+'\n')
     _file.write(end)
 
+
+def response_format_write(_file, title, text, key, word, blank=0, start='', end=''):
+    _file.write(start)
+    head = ''
+    for i in range(0, blank):
+        head += ' '
+    _file.write(head+title+':\n')
+    _file.write(head+'  - custom: '+'\n')
+    _file.write(head+'      text: \"'+text+'\"\n')
+    if word is not None:
+        _file.write(head+'      '+key+': \"'+word+'\"\n')
+    _file.write(end)

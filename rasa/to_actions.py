@@ -6,7 +6,7 @@
 form_list = [{'name': 'test_form', 'slots': ['location', 'time'], 'action':'123'}]
 """
 import os
-from rasa.to_domain import to_string_list
+from rasa.to_domain import to_string_list, transfer_response
 
 head = 'from typing import Any, Text, Dict, List\n' \
        'from rasa_sdk import Action, Tracker\n' \
@@ -28,8 +28,7 @@ func_submit = '    def submit(\n' \
 func_submit_return = '        return [AllSlotsReset()]\n\n\n'
 
 form_action = '        headers = {"Content-Type":"application/json"}\n' \
-              '        response = requests.post(url, json.dumps(body), headers=headers)\n' \
-              '        dispatcher.utter_message(response.text)\n'
+              '        response = requests.post(url, json.dumps(body), headers=headers)\n'
 
 form_text = '        dispatcher.utter_message'
 
@@ -63,11 +62,12 @@ func_qa_intent_next = '        body = {\'userText\': text}\n' \
 
 
 def get_form_list(mysql, skl_id):
-    id_sql = 'select iten_id from action where type = 2 and skl_id = ' + str(skl_id)
-    id_list = to_string_list(mysql.inquire_all(id_sql))
+    name_id_sql = 'select name, iten_id from action where type = 2 and skl_id = ' + str(skl_id)
+    name_id_list = mysql.inquire_all(name_id_sql)
     form_list = []
     form_text_list = []
-    for intent_id in id_list:
+    for name_id in name_id_list:
+        intent_id = name_id[1]
         name_reply_sql = 'select name, reply, reply_type from intent where iten_id = ' + str(intent_id)
         name_reply = mysql.inquire_one(name_reply_sql)
         name = name_reply[0] + '_form'
@@ -76,7 +76,7 @@ def get_form_list(mysql, skl_id):
                     'where iten_id = ' + str(intent_id)
         raw_slots = mysql.inquire_all(slots_sql)
         slots = to_string_list(raw_slots)
-        fm = dict(name=name, slots=slots, action=action)
+        fm = dict(name=name, slots=slots, action=action, action_name=name_id[0])
         if name_reply[2] == 2:
             form_list.append(fm)
         elif name_reply[2] == 1:
@@ -119,6 +119,7 @@ def to_actions(mysql, path, skl_id, model_type):
                 else:
                     f.write('}\n')
             f.write(form_action)
+            f.write('        dispatcher.utter_message(template=\'' + form['action_name'] + '\', my_var=response.text)\n')
             f.write(func_submit_return)
         for form in form_text_list:
             str_list = form['name'].split('_')
@@ -133,7 +134,7 @@ def to_actions(mysql, path, skl_id, model_type):
             f.write(func_submit)
             # 写动作
             f.write(form_text)
-            f.write('(\'' + form['action'] + '\')\n')
+            f.write('(template=\'' + form['action_name'] + '\', my_var=\'' + transfer_response(form['action']) + '\')\n')
             f.write(func_submit_return)
         f.write(func_slot_null)
         if model_type == "qa":

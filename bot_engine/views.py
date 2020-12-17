@@ -186,9 +186,13 @@ def test(request):
     # end_time = datetime.datetime.now().replace(tzinfo=pytz.timezone('UTC'))
     # result = {'time': (end_time-create_time).seconds}
     # else:
-    tracker = get_tracker_api(get_port_from_api('http://10.108.211.136:8300/webhooks/rest/webhook'), '0001')
-    result = {'out_string': tracker}
-    return success(result)
+    # tracker = get_tracker_api(get_port_from_api('http://10.108.211.136:8300/webhooks/rest/webhook'), '0001')
+    # result = {'out_string': tracker}
+    data = json.loads(request.body)
+    skl_id = data['skl_id']
+    model_type = data['model_type']  # chat, qa
+    create_config_file(skl_id, True, model_type)
+    return success()
 
 
 def clear_sub_process():

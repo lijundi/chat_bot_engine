@@ -8,10 +8,11 @@ form_list = ['to_do_list_form']
 entity_list = ['item', 'time']
 slot_list = ['item', 'time']
 action_list = ['utter_greet', 'utter_goodbye', 'utter_ask_item']
-response_list = [['utter_greet', 'hello'], ['utter_goodbye', 'bye']]
+response_slot_list = [['utter_ask_who', 'who', '1,2,3'], ['utter_ask_where', 'where', '1,2,3']]
+response_intent_list = [['utter_greet', 'hello', 'text'], ['utter_goodbye', 'bye', 'richText']]
 """
 import os
-from rasa.file_opt import format_write
+from rasa.file_opt import format_write, response_format_write
 
 session_opt = '\n\nsession_config:\n' \
               '    session_expiration_time: 60\n' \
@@ -70,7 +71,9 @@ def get_action(mysql, skl_id):
 
 
 def get_response(mysql, skl_id):
-    response = []
+    slot_response = []
+    intent_response = []
+    form_response = []
     # # 查iten_slot表
     # intent_slot_sql = 'select name, iten_id, slot_id from action where type = 1 and skl_id = ' + str(skl_id)
     # intent_slot_result = mysql.inquire_all(intent_slot_sql)
@@ -80,20 +83,37 @@ def get_response(mysql, skl_id):
     #     r = [item[0], ask[0]]
     #     response.append(r)
     # 查slot表
-    slot_sql = 'select action.name, slot.ask from action inner join slot on action.slot_id = slot.slot_id ' \
+    slot_sql = 'select action.name, slot.ask, slot.answer from action inner join slot on action.slot_id = slot.slot_id ' \
                'where action.skl_id = ' + str(skl_id)
     slot_result = mysql.inquire_all(slot_sql)
     for item in slot_result:
-        r = [item[0], item[1]]
-        response.append(r)
+        r = [item[0], item[1], item[2]]
+        slot_response.append(r)
     # 查intent表
-    intent_sql = 'select action.name, intent.reply from action inner join intent on action.iten_id = intent.iten_id ' \
+    intent_sql = 'select action.name, intent.reply, intent.answertype from action inner join intent on action.iten_id = intent.iten_id ' \
                  'where action.type = 0 and action.skl_id = ' + str(skl_id)
+    form_sql = 'select action.name, intent.answertype from action inner join intent on action.iten_id = intent.iten_id ' \
+                 'where action.type = 2 and action.skl_id = ' + str(skl_id)
     intent_result = mysql.inquire_all(intent_sql)
     for item in intent_result:
+        r = [item[0], item[1], item[2]]
+        intent_response.append(r)
+    form_result = mysql.inquire_all(form_sql)
+    for item in form_result:
         r = [item[0], item[1]]
-        response.append(r)
-    return response
+        form_response.append(r)
+    return slot_response, intent_response, form_response
+
+
+def transfer_response(response):
+    # 双引号转义
+    tr_response = ""
+    for ch in response:
+        if ch == "\"":
+            tr_response += "\\" + ch
+        else:
+            tr_response += ch
+    return tr_response
 
 
 def to_domain(mysql, path, skl_id, model_type):
@@ -107,7 +127,7 @@ def to_domain(mysql, path, skl_id, model_type):
     action_list.append("action_slot_null")
     if model_type == 'qa':
         action_list.append('action_qa_intent')
-    response_list = get_response(mysql, skl_id)
+    slot_response_list, intent_response_list, form_response_list = get_response(mysql, skl_id)
     domain_path = os.path.join(path, 'domain.yml')
     with open(domain_path, 'w', encoding='utf8') as f:
         format_write(f, "intents:", intent_list, end='\n')
@@ -123,8 +143,13 @@ def to_domain(mysql, path, skl_id, model_type):
             format_write(f, '')
         if action_list:
             format_write(f, "actions:", action_list, end='\n')
-        if response_list:
+        if slot_response_list or intent_response_list or form_response_list:
             format_write(f, "responses:")
-            for item in response_list:
-                format_write(f, item[0] + ":", ['text: ' + "\"" + item[1] + "\""], 2, '\n')
+            for item in slot_response_list:
+                response_format_write(f, item[0], transfer_response(item[1]), 'answer', item[2], 2, '\n')
+                # format_write(f, item[0] + ":", ['text: ' + "\"" + transfer_response(item[1]) + "\""], 2, '\n')
+            for item in intent_response_list:
+                response_format_write(f, item[0], transfer_response(item[1]), 'answerType', item[2], 2, '\n')
+            for item in form_response_list:
+                response_format_write(f, item[0], "{my_var}", 'answerType', item[1], 2, '\n')
         f.write(session_opt)

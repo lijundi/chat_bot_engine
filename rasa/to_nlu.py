@@ -42,7 +42,7 @@ def get_examples(mysql, skl_id):
 
 def to_nlu(mysql, path, skl_id):
     nlu['rasa_nlu_data']['common_examples'] = get_examples(mysql, skl_id)
-    json_str = json.dumps(nlu, indent=4)
+    json_str = json.dumps(nlu, indent=4, ensure_ascii=False)
     nlu_path = os.path.join(path, 'data', 'nlu.json')
     with open(nlu_path, 'w', encoding='utf8') as json_file:
         json_file.write(json_str)
