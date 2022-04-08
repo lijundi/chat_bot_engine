@@ -73,7 +73,8 @@ def get_action(mysql, skl_id):
 def get_response(mysql, skl_id):
     slot_response = []
     intent_response = []
-    form_response = []
+    form1_response = []
+    form2_response = []
     # # 查iten_slot表
     # intent_slot_sql = 'select name, iten_id, slot_id from action where type = 1 and skl_id = ' + str(skl_id)
     # intent_slot_result = mysql.inquire_all(intent_slot_sql)
@@ -92,29 +93,41 @@ def get_response(mysql, skl_id):
     # 查intent表
     intent_sql = 'select action.name, intent.reply, intent.answertype from action inner join intent on action.iten_id = intent.iten_id ' \
                  'where action.type = 0 and action.skl_id = ' + str(skl_id)
-    form_sql = 'select action.name, intent.answertype from action inner join intent on action.iten_id = intent.iten_id ' \
-                 'where action.type = 2 and action.skl_id = ' + str(skl_id)
+    # 富文本返回的表单
+    form1_sql = 'select action.name, intent.reply, intent.answertype from action inner join intent on action.iten_id = intent.iten_id ' \
+                 'where intent.reply_type = 1 and action.type = 2 and action.skl_id = ' + str(skl_id)
+    # 接口返回的表单
+    form2_sql = 'select action.name, intent.answertype from action inner join intent on action.iten_id = intent.iten_id ' \
+               'where intent.reply_type = 2 and action.type = 2 and action.skl_id = ' + str(skl_id)
     intent_result = mysql.inquire_all(intent_sql)
     for item in intent_result:
         r = [item[0], item[1], item[2]]
         intent_response.append(r)
-    form_result = mysql.inquire_all(form_sql)
-    for item in form_result:
+    form1_result = mysql.inquire_all(form1_sql)
+    for item in form1_result:
+        r = [item[0], item[1], item[2]]
+        form1_response.append(r)
+    form2_result = mysql.inquire_all(form2_sql)
+    for item in form2_result:
         r = [item[0], item[1]]
-        form_response.append(r)
-    return slot_response, intent_response, form_response
+        form2_response.append(r)
+    return slot_response, intent_response, form1_response, form2_response
 
 
 def transfer_response(response):
-    # 双引号转义
+    # 双引号和右斜杠转义
     tr_response = ""
     for ch in response:
-        if ch == "\"":
+        if ch == "\"" or ch == "\\":
             tr_response += "\\" + ch
         else:
             tr_response += ch
     return tr_response
 
+
+def trans_response_json(res):
+    # 双引号
+    return res.replace('\"', "\\\"")
 
 def to_domain(mysql, path, skl_id, model_type):
     # print(get_intents(mysql, 115))
@@ -127,7 +140,7 @@ def to_domain(mysql, path, skl_id, model_type):
     action_list.append("action_slot_null")
     if model_type == 'qa':
         action_list.append('action_qa_intent')
-    slot_response_list, intent_response_list, form_response_list = get_response(mysql, skl_id)
+    slot_response_list, intent_response_list, form1_response_list, form2_response_list = get_response(mysql, skl_id)
     domain_path = os.path.join(path, 'domain.yml')
     with open(domain_path, 'w', encoding='utf8') as f:
         format_write(f, "intents:", intent_list, end='\n')
@@ -143,13 +156,23 @@ def to_domain(mysql, path, skl_id, model_type):
             format_write(f, '')
         if action_list:
             format_write(f, "actions:", action_list, end='\n')
-        if slot_response_list or intent_response_list or form_response_list:
+        if slot_response_list or intent_response_list or form1_response_list or form2_response_list:
             format_write(f, "responses:")
             for item in slot_response_list:
-                response_format_write(f, item[0], transfer_response(item[1]), 'answer', item[2], 2, '\n')
+                response_format_write(f, item[0], trans_response_json(item[1]), 'answer', item[2], 2, '\n')
                 # format_write(f, item[0] + ":", ['text: ' + "\"" + transfer_response(item[1]) + "\""], 2, '\n')
             for item in intent_response_list:
-                response_format_write(f, item[0], transfer_response(item[1]), 'answerType', item[2], 2, '\n')
-            for item in form_response_list:
+                if item[2] == 'json' or item[2] == 'ivr':
+                    item[1] = item[1].replace('<p>', '').replace('</p>', '')
+                    response_format_write(f, item[0], trans_response_json(item[1]), 'answerType', item[2], 2, '\n')
+                else:
+                    response_format_write(f, item[0], transfer_response(item[1]), 'answerType', item[2], 2, '\n')
+            for item in form1_response_list:
+                if item[2] == 'json' or item[2] == 'ivr':
+                    item[1] = item[1].replace('<p>', '').replace('</p>', '')
+                    response_format_write(f, item[0], trans_response_json(item[1]), 'answerType', item[2], 2, '\n')
+                else:
+                    response_format_write(f, item[0], transfer_response(item[1]), 'answerType', item[2], 2, '\n')
+            for item in form2_response_list:
                 response_format_write(f, item[0], "{my_var}", 'answerType', item[1], 2, '\n')
         f.write(session_opt)

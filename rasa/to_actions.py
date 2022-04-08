@@ -134,7 +134,8 @@ def to_actions(mysql, path, skl_id, model_type):
             f.write(func_submit)
             # 写动作
             f.write(form_text)
-            f.write('(template=\'' + form['action_name'] + '\', my_var=\'' + transfer_response(form['action']) + '\')\n')
+            # f.write('(template=\'' + form['action_name'] + '\', my_var=\'' + transfer_response(form['action']) + '\')\n')
+            f.write('(template=\'' + form['action_name'] + '\')\n')
             f.write(func_submit_return)
         f.write(func_slot_null)
         if model_type == "qa":
