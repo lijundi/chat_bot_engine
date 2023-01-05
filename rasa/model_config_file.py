@@ -11,10 +11,10 @@ from rasa.to_default import to_default
 
 # 生成配置文件
 def create_config_file(skl_id, first, model_type):
-    host = "10.10.200.69"  # 数据库的ip地址
+    host = "114.67.200.39"  # 数据库的ip地址
     user = "root"  # 数据库的账号
     password = "mySQL#h@d00p"  # 数据库的密码
-    port = 3333  # mysql数据库通用端口号
+    port = 3306  # mysql数据库通用端口号
     mysql = MySql(host=host, user=user, password=password, port=port, database='bot')
     pro_dir = os.path.join(MODEL_DIR, str(skl_id))
     # dir_data = os.path.join(pro_dir, 'data')
